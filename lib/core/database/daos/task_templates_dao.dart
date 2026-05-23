@@ -70,4 +70,9 @@ class TaskTemplatesDao extends DatabaseAccessor<AppDatabase>
       (select(taskTemplatesTable)
         ..where((t) => t.isDirty.equals(true)))
           .get();
+
+  Stream<List<TaskTemplatesTableData>> watchAll() =>
+      (select(taskTemplatesTable)
+        ..where((t) => t.isArchived.equals(false)))
+          .watch();
 }

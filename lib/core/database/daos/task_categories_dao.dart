@@ -34,4 +34,7 @@ class TaskCategoriesDao extends DatabaseAccessor<AppDatabase>
       (select(taskCategoriesTable)
         ..where((t) => t.isDirty.equals(true)))
           .get();
+
+  Stream<List<TaskCategoriesTableData>> watchAll() =>
+      select(taskCategoriesTable).watch();
 }

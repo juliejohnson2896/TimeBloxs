@@ -67,6 +67,7 @@ class ScheduledBlock {
   final String? taskTemplateName;
   final String? categoryName;
   final String? categoryColor;
+  final String? projectColor;
 
   const ScheduledBlock({
     required this.id,
@@ -84,6 +85,7 @@ class ScheduledBlock {
     this.taskTemplateName,
     this.categoryName,
     this.categoryColor,
+    this.projectColor,
   });
 
   factory ScheduledBlock.fromRecord(Map<String, dynamic> record) {
@@ -146,6 +148,7 @@ class ScheduledBlock {
     String? categoryId,
     BlockStatus? status,
     String? notes,
+    String? projectColor,
   }) {
     return ScheduledBlock(
       id: id,
@@ -163,6 +166,7 @@ class ScheduledBlock {
       taskTemplateName: taskTemplateName,
       categoryName: categoryName,
       categoryColor: categoryColor,
+      projectColor: projectColor ?? this.projectColor,
     );
   }
 

@@ -6,6 +6,8 @@ import 'package:timebloxs/features/schedule/widgets/create_block_sheet.dart';
 import '../../../core/models/scheduled_block.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../../../core/utils/app_logger.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import 'assign_task_sheet.dart';
 
 class TimeBlockCard extends ConsumerWidget {
@@ -16,7 +18,12 @@ class TimeBlockCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accentColor = Theme.of(context).colorScheme.primary;
-    final color = parseColor(block.categoryColor, fallback: accentColor);
+
+    // Project colour takes priority over category colour
+    final color = block.projectColor != null
+        ? parseColor(block.projectColor, fallback: accentColor)
+        : parseColor(block.categoryColor, fallback: accentColor);
+
     final isShort = block.durationMins < 30;
 
     return GestureDetector(
@@ -249,45 +256,106 @@ class TimeBlockCard extends ConsumerWidget {
               },
             ),
 
-            // Assign task option — only for dynamic blocks
-            if (block.isDynamic)
-              ListTile(
-                leading: Icon(
-                  block.isAssigned
-                      ? Icons.swap_horiz_outlined
-                      : Icons.playlist_add_outlined,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                title: Text(
-                  block.isAssigned ? 'Reassign Task' : 'Assign Task',
-                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
-                ),
-                subtitle: block.isAssigned
-                    ? Text(
-                  block.taskTemplateName ?? '',
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 12,
+            // Dynamic block task management
+            if (block.isDynamic) ...[
+              if (block.isAssigned) ...[
+                // Reassign option
+                ListTile(
+                  leading: Icon(
+                    Icons.swap_horiz_outlined,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                )
-                    : null,
-                onTap: () {
-                  Navigator.pop(context);
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: AppTheme.surface,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(20)),
+                  title: Text(
+                    'Reassign Task',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                    builder: (_) => AssignTaskSheet(
-                      blockId: block.id,
-                      categoryId: block.categoryId,
+                  ),
+                  subtitle: Text(
+                    block.taskTemplateName ?? '',
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
                     ),
-                  );
-                },
-              ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: AppTheme.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      builder: (_) => AssignTaskSheet(
+                        blockId: block.id,
+                        categoryId: block.categoryId,
+                      ),
+                    );
+                  },
+                ),
+                // Unassign option
+                ListTile(
+                  leading: const Icon(
+                    Icons.link_off_outlined,
+                    color: AppTheme.textSecondary,
+                  ),
+                  title: const Text('Unassign Task'),
+                  subtitle: const Text(
+                    'Keep block, remove assigned task',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      await ref
+                          .read(scheduledBlockRepositoryProvider)
+                          .unassignTask(block.id);
+                    } catch (e, stack) {
+                      await logger.error(
+                          'TimeBlockCard.unassignTask', e, stack);
+                      if (context.mounted) {
+                        SnackbarHelper.showError(
+                          context,
+                          'Couldn\'t unassign the task. Please try again.',
+                        );
+                      }
+                    }
+                  },
+                ),
+              ] else ...[
+                // Assign option — no task yet
+                ListTile(
+                  leading: Icon(
+                    Icons.playlist_add_outlined,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: Text(
+                    'Assign Task',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: AppTheme.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      builder: (_) => AssignTaskSheet(
+                        blockId: block.id,
+                        categoryId: block.categoryId,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ],
 
             const Divider(height: 1),
 

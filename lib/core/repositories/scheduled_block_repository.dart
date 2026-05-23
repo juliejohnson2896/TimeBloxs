@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../database/app_database.dart';
 import '../models/scheduled_block.dart';
+import 'package:rxdart/rxdart.dart';
 
 class ScheduledBlockRepository {
   final AppDatabase _db;
@@ -91,7 +92,51 @@ class ScheduledBlockRepository {
   }
 
   Stream<List<ScheduledBlock>> watchForDate(DateTime date) {
-    return _db.scheduledBlocksDao.watchForDate(date).asyncMap(_enrichRows);
+    final blocksStream = _db.scheduledBlocksDao.watchForDate(date);
+    final categoriesStream = _db.taskCategoriesDao.watchAll();
+    final tasksStream = _db.taskTemplatesDao.watchAll();
+    final projectsStream = _db.projectsDao.watchAll();  // add this
+
+    return Rx.combineLatest4(
+      blocksStream,
+      categoriesStream,
+      tasksStream,
+      projectsStream,
+          (blocks, categories, tasks, projects) {
+        final categoryMap = {for (final c in categories) c.id: c};
+        final taskMap = {for (final t in tasks) t.id: t};
+        final projectMap = {for (final p in projects) p.id: p};
+
+        return blocks.map((row) {
+          final category = categoryMap[row.categoryId];
+          final task = row.taskTemplateId != null
+              ? taskMap[row.taskTemplateId]
+              : null;
+          final project = task?.projectId != null
+              ? projectMap[task!.projectId]
+              : null;
+
+          return ScheduledBlock(
+            id: row.id,
+            date: row.date,
+            startTime: row.startTime,
+            durationMins: row.durationMins,
+            label: row.label,
+            blockType: BlockType.fromString(row.blockType),
+            taskTemplateId: row.taskTemplateId,
+            categoryId: row.categoryId,
+            status: BlockStatus.fromString(row.status),
+            notes: row.notes,
+            created: row.createdAt,
+            updated: row.updatedAt,
+            taskTemplateName: task?.name,
+            categoryName: category?.name,
+            categoryColor: category?.color,
+            projectColor: project?.color,   // add this
+          );
+        }).toList();
+      },
+    );
   }
 
   Future<List<ScheduledBlock>> _enrichRows(
@@ -100,14 +145,18 @@ class ScheduledBlockRepository {
 
     final categories = await _db.taskCategoriesDao.getAll();
     final tasks = await _db.taskTemplatesDao.getAll();
+    final projects = await _db.projectsDao.getAll();
 
     final categoryMap = {for (final c in categories) c.id: c};
     final taskMap = {for (final t in tasks) t.id: t};
+    final projectMap = {for (final p in projects) p.id: p};
 
     return rows.map((row) {
       final category = categoryMap[row.categoryId];
       final task =
       row.taskTemplateId != null ? taskMap[row.taskTemplateId] : null;
+      final project =
+      task?.projectId != null ? projectMap[task!.projectId] : null;
 
       return ScheduledBlock(
         id: row.id,
@@ -125,7 +174,32 @@ class ScheduledBlockRepository {
         taskTemplateName: task?.name,
         categoryName: category?.name,
         categoryColor: category?.color,
+        projectColor: project?.color,
       );
     }).toList();
+  }
+
+  Future<ScheduledBlock> unassignTask(String blockId) async {
+    final block = await getById(blockId);
+    if (block == null) throw Exception('Block not found');
+    final now = DateTime.now();
+    await _db.scheduledBlocksDao.updateBlock(
+      ScheduledBlocksTableCompanion(
+        id: Value(block.id),
+        date: Value(block.date),
+        startTime: Value(block.startTime),
+        durationMins: Value(block.durationMins),
+        label: Value(block.label),
+        blockType: Value(block.blockType.toJson()),
+        taskTemplateId: const Value(null), // explicitly clear
+        categoryId: Value(block.categoryId),
+        status: Value(block.status.toJson()),
+        notes: Value(block.notes),
+        isDirty: const Value(true),
+        createdAt: Value(block.created),
+        updatedAt: Value(now),
+      ),
+    );
+    return (await getById(blockId))!;
   }
 }

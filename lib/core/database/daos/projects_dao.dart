@@ -34,4 +34,7 @@ class ProjectsDao extends DatabaseAccessor<AppDatabase>
 
   Future<List<ProjectsTableData>> getDirty() =>
       (select(projectsTable)..where((t) => t.isDirty.equals(true))).get();
+
+  Stream<List<ProjectsTableData>> watchAll() =>
+      select(projectsTable).watch();
 }

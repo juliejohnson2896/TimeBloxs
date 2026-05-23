@@ -69,8 +69,14 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
     super.dispose();
   }
 
-  bool get _isValid =>
-      _labelController.text.trim().isNotEmpty && _selectedCategoryId != null;
+  bool get _isValid {
+    if (_labelController.text.trim().isEmpty) return false;
+    if (_selectedCategoryId == null) return false;
+    if (_blockType == BlockType.static && _selectedTaskId == null) {
+      return false;
+    }
+    return true;
+  }
 
   Future<void> _pickStartTime() async {
     final picked = await showTimePicker(
@@ -344,6 +350,7 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
             ),
             const Gap(16),
 
+            // Task picker (only for static blocks)
 // Task picker (only for static blocks)
             if (_blockType == BlockType.static)
               tasksAsync.when(
@@ -355,9 +362,33 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
                           t.categoryId == _selectedCategoryId))
                       .toList();
 
-                  if (available.isEmpty) return const SizedBox.shrink();
+                  if (available.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: AppTheme.textSecondary,
+                          ),
+                          const Gap(8),
+                          Expanded(
+                            child: Text(
+                              'No tasks available for this category. '
+                                  'Add tasks in the Tasks tab first.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
-                  // Validate selected task still exists in available list
                   final taskExists =
                   available.any((t) => t.id == _selectedTaskId);
                   if (!taskExists && _selectedTaskId != null) {
@@ -371,11 +402,8 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'ASSIGN TASK (OPTIONAL)',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(
+                        'ASSIGN TASK',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           letterSpacing: 1.2,
                           fontWeight: FontWeight.w600,
                         ),
@@ -385,24 +413,39 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
                         value: safeTaskValue,
                         dropdownColor: AppTheme.surfaceVariant,
                         decoration: const InputDecoration(
-                          hintText: 'No task assigned',
+                          hintText: 'Select a task',
                         ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('No task assigned'),
+                        // No "No task assigned" option for static blocks
+                        items: {for (final t in available) t.id: t}
+                            .values
+                            .map(
+                              (t) => DropdownMenuItem(
+                            value: t.id,
+                            child: Text(t.name),
                           ),
-                          ...{for (final t in available) t.id: t}
-                              .values
-                              .map(
-                                (t) => DropdownMenuItem(
-                              value: t.id,
-                              child: Text(t.name),
-                            ),
-                          ),
-                        ],
+                        )
+                            .toList(),
                         onChanged: (v) => setState(() => _selectedTaskId = v),
                       ),
+                      const Gap(8),
+                      // Hint when no task selected
+                      if (safeTaskValue == null)
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_outlined,
+                              size: 14,
+                              color: AppTheme.categoryChores,
+                            ),
+                            const Gap(6),
+                            Text(
+                              'Static blocks require an assigned task.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppTheme.categoryChores,
+                              ),
+                            ),
+                          ],
+                        ),
                       const Gap(16),
                     ],
                   );
