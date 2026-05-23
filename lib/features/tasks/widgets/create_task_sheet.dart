@@ -11,8 +11,13 @@ import '../providers/task_providers.dart';
 
 class CreateTaskSheet extends ConsumerStatefulWidget {
   final TaskTemplate? existingTask;
+  final TaskTemplate? parentTask; // set when creating a sub-task
 
-  const CreateTaskSheet({super.key, this.existingTask});
+  const CreateTaskSheet({
+    super.key,
+    this.existingTask,
+    this.parentTask,
+  });
 
   @override
   ConsumerState<CreateTaskSheet> createState() => _CreateTaskSheetState();
@@ -27,17 +32,28 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
   bool _isLoading = false;
 
   bool get _isEditing => widget.existingTask != null;
+  bool get _isSubTask =>
+      widget.parentTask != null ||
+          (widget.existingTask != null && widget.existingTask!.isSubTask);
 
   @override
   void initState() {
     super.initState();
     final task = widget.existingTask;
+    final parent = widget.parentTask;
+
     if (task != null) {
+      // Editing existing task
       _nameController.text = task.name;
       _notesController.text = task.notes ?? '';
       _selectedCategoryId = task.categoryId;
       _selectedProjectId = task.projectId;
       _isReusable = task.isReusable;
+    } else if (parent != null) {
+      // Creating sub-task — inherit from parent
+      _selectedCategoryId = parent.categoryId;
+      _selectedProjectId = parent.projectId;
+      _isReusable = false; // sub-tasks are always one-off
     }
   }
 
@@ -74,12 +90,17 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
           id: '',
           name: _nameController.text.trim(),
           categoryId: _selectedCategoryId!,
-          projectId: _selectedProjectId,
+          projectId: _isSubTask
+              ? widget.parentTask!.projectId  // inherit from parent
+              : _selectedProjectId,
+          parentTaskId: _isSubTask
+              ? widget.parentTask!.id         // link to parent
+              : null,
           notes: _notesController.text.trim().isEmpty
               ? null
               : _notesController.text.trim(),
           isSystem: false,
-          isReusable: _isReusable,
+          isReusable: _isSubTask ? false : _isReusable,
           isArchived: false,
           created: DateTime.now(),
           updated: DateTime.now(),
@@ -88,6 +109,16 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
       }
 
       ref.invalidate(taskTemplatesProvider);
+
+      // Also invalidate sub-tasks for the parent if this is a sub-task
+      if (_isSubTask) {
+        final parentId = widget.parentTask?.id
+            ?? widget.existingTask?.parentTaskId;
+        if (parentId != null) {
+          ref.invalidate(subTasksProvider(parentId));
+        }
+      }
+
       if (mounted) Navigator.pop(context);
     } catch (e, stack) {
       await logger.error('CreateTaskSheet._submit', e, stack);
@@ -135,10 +166,36 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
             const Gap(20),
 
             Text(
-              _isEditing ? 'Edit Task' : 'New Task',
+              _isEditing
+                  ? 'Edit Task'
+                  : _isSubTask
+                  ? 'New Sub-task'
+                  : 'New Task',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const Gap(24),
+
+            // Add this right after the title, before the name field
+            if (_isSubTask) ...[
+              const Gap(4),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.subdirectory_arrow_right,
+                    size: 14,
+                    color: AppTheme.textSecondary,
+                  ),
+                  const Gap(4),
+                  Text(
+                    widget.parentTask != null
+                        ? 'Sub-task of ${widget.parentTask!.name}'
+                        : 'Sub-task',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              const Gap(16),
+            ] else
+              const Gap(24),
 
             // Name field
             TextField(
@@ -219,64 +276,65 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
             const Gap(16),
 
             // Project picker
-            projectsAsync.when(
-              data: (projects) {
-                if (projects.isEmpty) return const SizedBox.shrink();
+            if (!_isSubTask)
+              projectsAsync.when(
+                data: (projects) {
+                  if (projects.isEmpty) return const SizedBox.shrink();
 
-                // If the selected project no longer exists, clear it
-                final projectExists =
-                projects.any((p) => p.id == _selectedProjectId);
-                if (!projectExists && _selectedProjectId != null) {
-                  // Schedule the state update for after build completes
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      setState(() => _selectedProjectId = null);
-                    }
-                  });
-                }
+                  // If the selected project no longer exists, clear it
+                  final projectExists =
+                  projects.any((p) => p.id == _selectedProjectId);
+                  if (!projectExists && _selectedProjectId != null) {
+                    // Schedule the state update for after build completes
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() => _selectedProjectId = null);
+                      }
+                    });
+                  }
 
-                // Use null if project doesn't exist to avoid dropdown error
-                final safeValue = projectExists ? _selectedProjectId : null;
+                  // Use null if project doesn't exist to avoid dropdown error
+                  final safeValue = projectExists ? _selectedProjectId : null;
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'PROJECT (OPTIONAL)',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        letterSpacing: 1.2,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Gap(8),
-                    DropdownButtonFormField<String>(
-                      value: safeValue,    // use safeValue not _selectedProjectId
-                      dropdownColor: AppTheme.surfaceVariant,
-                      decoration: const InputDecoration(
-                        hintText: 'No project',
-                      ),
-                      items: [
-                        const DropdownMenuItem(
-                          value: null,
-                          child: Text('No project'),
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PROJECT (OPTIONAL)',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w600,
                         ),
-                        ...projects.map(
-                              (p) => DropdownMenuItem(
-                            value: p.id,
-                            child: Text(p.name),
+                      ),
+                      const Gap(8),
+                      DropdownButtonFormField<String>(
+                        value: safeValue,    // use safeValue not _selectedProjectId
+                        dropdownColor: AppTheme.surfaceVariant,
+                        decoration: const InputDecoration(
+                          hintText: 'No project',
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Text('No project'),
                           ),
-                        ),
-                      ],
-                      onChanged: (value) =>
-                          setState(() => _selectedProjectId = value),
-                    ),
-                    const Gap(16),
-                  ],
-                );
-              },
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-            ),
+                          ...projects.map(
+                                (p) => DropdownMenuItem(
+                              value: p.id,
+                              child: Text(p.name),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _selectedProjectId = value),
+                      ),
+                      const Gap(16),
+                    ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
 
             // Notes field
             TextField(
@@ -290,40 +348,42 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
             ),
             const Gap(16),
 
-            // Reusable toggle
-            Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Reusable task',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        Text(
-                          'Stays in your pool permanently',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+            // Reusable toggle — hidden for sub-tasks
+            if (!_isSubTask)
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceVariant,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Reusable task',
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            'Stays in your pool permanently',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Switch(
-                    value: _isReusable,
-                    onChanged: (value) =>
-                        setState(() => _isReusable = value),
-                    activeColor: accentColor,
-                  ),
-                ],
+                    Switch(
+                      value: _isReusable,
+                      onChanged: (value) =>
+                          setState(() => _isReusable = value),
+                      activeColor: accentColor,
+                    ),
+                  ],
+                ),
               ),
-            ),
+
             const Gap(24),
 
             // Submit button

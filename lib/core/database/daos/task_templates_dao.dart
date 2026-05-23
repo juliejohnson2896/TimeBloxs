@@ -11,6 +11,14 @@ class TaskTemplatesDao extends DatabaseAccessor<AppDatabase>
 
   Future<List<TaskTemplatesTableData>> getAll() =>
       (select(taskTemplatesTable)
+        ..where((t) =>
+        t.isArchived.equals(false) &
+        t.parentTaskId.isNull())  // exclude sub-tasks
+        ..orderBy([(t) => OrderingTerm.asc(t.name)]))
+          .get();
+
+  Future<List<TaskTemplatesTableData>> getAllIncludingSubTasks() =>
+      (select(taskTemplatesTable)
         ..where((t) => t.isArchived.equals(false))
         ..orderBy([(t) => OrderingTerm.asc(t.name)]))
           .get();
@@ -73,6 +81,17 @@ class TaskTemplatesDao extends DatabaseAccessor<AppDatabase>
 
   Stream<List<TaskTemplatesTableData>> watchAll() =>
       (select(taskTemplatesTable)
-        ..where((t) => t.isArchived.equals(false)))
+        ..where((t) =>
+        t.isArchived.equals(false) &
+        t.parentTaskId.isNull())  // exclude sub-tasks
+        ..orderBy([(t) => OrderingTerm.asc(t.name)]))
+          .watch();
+
+  Stream<List<TaskTemplatesTableData>> watchSubTasks(String parentTaskId) =>
+      (select(taskTemplatesTable)
+        ..where((t) =>
+        t.parentTaskId.equals(parentTaskId) &
+        t.isArchived.equals(false))
+        ..orderBy([(t) => OrderingTerm.asc(t.name)]))
           .watch();
 }

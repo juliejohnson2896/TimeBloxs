@@ -22,7 +22,8 @@ class AssignTaskSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tasksAsync = ref.watch(taskTemplatesProvider);
+    // Change this line at the top of build:
+    final tasksAsync = ref.watch(allTasksForPickerProvider);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -62,22 +63,42 @@ class AssignTaskSheet extends ConsumerWidget {
             const Gap(16),
 
             tasksAsync.when(
+              // In the filtered tasks section, update to include sub-tasks
               data: (tasks) {
-                // Filter to same category + not archived
-                final filtered = tasks
+                // Matching category tasks — split into top-level and sub-tasks
+                final matchingTopLevel = tasks
                     .where((t) =>
                 !t.isArchived &&
-                    t.categoryId == categoryId)
+                    t.categoryId == categoryId &&
+                    !t.isSubTask)
                     .toList();
 
-                // Also include tasks from other categories
+                final matchingSubTasks = tasks
+                    .where((t) =>
+                !t.isArchived &&
+                    t.categoryId == categoryId &&
+                    t.isSubTask)
+                    .toList();
+
+                // Other category tasks
                 final others = tasks
                     .where((t) =>
                 !t.isArchived &&
-                    t.categoryId != categoryId)
+                    t.categoryId != categoryId &&
+                    !t.isSubTask)
                     .toList();
 
-                if (filtered.isEmpty && others.isEmpty) {
+                final otherSubTasks = tasks
+                    .where((t) =>
+                !t.isArchived &&
+                    t.categoryId != categoryId &&
+                    t.isSubTask)
+                    .toList();
+
+                if (matchingTopLevel.isEmpty &&
+                    matchingSubTasks.isEmpty &&
+                    others.isEmpty &&
+                    otherSubTasks.isEmpty) {
                   return Column(
                     children: [
                       const Icon(
@@ -110,21 +131,24 @@ class AssignTaskSheet extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Same category tasks first
-                        if (filtered.isNotEmpty) ...[
+                        if (matchingTopLevel.isNotEmpty || matchingSubTasks.isNotEmpty) ...[
                           _SectionHeader(label: 'Matching Category'),
                           const Gap(8),
-                          ...filtered.map((task) => _TaskOption(
+                          ...matchingTopLevel.map((task) => _TaskOption(
                             task: task,
                             onTap: () => _assign(context, ref, task),
                           )),
+                          ...matchingSubTasks.map((task) => _TaskOption(
+                            task: task,
+                            onTap: () => _assign(context, ref, task),
+                            isSubTask: true,
+                          )),
                           const Gap(16),
                         ],
-
-                        // Other category tasks
-                        if (others.isNotEmpty) ...[
+                        if (others.isNotEmpty || otherSubTasks.isNotEmpty) ...[
                           _SectionHeader(
-                            label: filtered.isNotEmpty
+                            label: (matchingTopLevel.isNotEmpty ||
+                                matchingSubTasks.isNotEmpty)
                                 ? 'Other Tasks'
                                 : 'All Tasks',
                           ),
@@ -132,6 +156,11 @@ class AssignTaskSheet extends ConsumerWidget {
                           ...others.map((task) => _TaskOption(
                             task: task,
                             onTap: () => _assign(context, ref, task),
+                          )),
+                          ...otherSubTasks.map((task) => _TaskOption(
+                            task: task,
+                            onTap: () => _assign(context, ref, task),
+                            isSubTask: true,
                           )),
                         ],
                       ],
@@ -189,13 +218,20 @@ class _SectionHeader extends StatelessWidget {
 class _TaskOption extends StatelessWidget {
   final TaskTemplate task;
   final VoidCallback onTap;
+  final bool isSubTask;
 
-  const _TaskOption({required this.task, required this.onTap});
+  const _TaskOption({
+    required this.task,
+    required this.onTap,
+    this.isSubTask = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = Theme.of(context).colorScheme.primary;
-    final color = parseColor(task.categoryColor, fallback: accentColor);
+    final color = parseColor(
+      task.categoryColor,
+      fallback: Theme.of(context).colorScheme.primary,
+    );
 
     return GestureDetector(
       onTap: onTap,
@@ -205,10 +241,17 @@ class _TaskOption extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.surfaceVariant,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.transparent),
         ),
         child: Row(
           children: [
+            if (isSubTask) ...[
+              const Icon(
+                Icons.subdirectory_arrow_right,
+                size: 14,
+                color: AppTheme.textDisabled,
+              ),
+              const Gap(4),
+            ],
             Container(
               width: 4,
               height: 36,
@@ -230,29 +273,45 @@ class _TaskOption extends StatelessWidget {
                       fontSize: 14,
                     ),
                   ),
-                  if (task.categoryName != null)
-                    Text(
-                      task.categoryName!,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 12,
-                      ),
-                    ),
+                  Row(
+                    children: [
+                      if (task.categoryName != null)
+                        Text(
+                          task.categoryName!,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 12,
+                          ),
+                        ),
+                      if (task.projectName != null) ...[
+                        const Text(
+                          ' · ',
+                          style: TextStyle(
+                            color: AppTheme.textDisabled,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Icon(
+                          Icons.folder_outlined,
+                          size: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                        const Gap(2),
+                        Flexible(
+                          child: Text(
+                            task.projectName!,
+                            style:
+                            Theme.of(context).textTheme.bodySmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
-            if (task.projectName != null) ...[
-              const Icon(
-                Icons.folder_outlined,
-                size: 14,
-                color: AppTheme.textSecondary,
-              ),
-              const Gap(4),
-              Text(
-                task.projectName!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
             const Gap(8),
             const Icon(
               Icons.chevron_right,

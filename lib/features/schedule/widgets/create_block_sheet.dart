@@ -150,7 +150,8 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(taskCategoriesProvider);
-    final tasksAsync = ref.watch(taskTemplatesProvider);
+    // Change this line at the top of build:
+    final tasksAsync = ref.watch(allTasksForPickerProvider);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(

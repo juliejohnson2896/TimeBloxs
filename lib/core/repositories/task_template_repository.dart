@@ -14,6 +14,11 @@ class TaskTemplateRepository {
     return _enrichRows(rows);
   }
 
+  Future<List<TaskTemplate>> getAllIncludingSubTasks() async {
+    final rows = await _db.taskTemplatesDao.getAllIncludingSubTasks();
+    return _enrichRows(rows);
+  }
+
   Future<List<TaskTemplate>> getByCategory(String categoryId) async {
     final rows = await _db.taskTemplatesDao.getByCategory(categoryId);
     return _enrichRows(rows);
@@ -124,5 +129,11 @@ class TaskTemplateRepository {
         projectName: project?.name,
       );
     }).toList();
+  }
+
+  Stream<List<TaskTemplate>> watchSubTasks(String parentTaskId) {
+    return _db.taskTemplatesDao.watchSubTasks(parentTaskId).asyncMap(
+          (rows) => _enrichRows(rows),
+    );
   }
 }

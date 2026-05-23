@@ -4,7 +4,10 @@ import 'package:gap/gap.dart';
 import 'package:timebloxs/core/repositories/repository_providers.dart';
 import '../../../core/models/task_template.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/color_utils.dart';
+import '../../../core/utils/error_messages.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../providers/task_providers.dart';
 import 'create_task_sheet.dart';
 
@@ -155,49 +158,102 @@ class TaskCard extends ConsumerWidget {
               ),
             ),
             const Gap(16),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit task'),
-              onTap: () {
-                Navigator.pop(context);
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: AppTheme.surface,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+
+            // Only show Add sub-task for top level non-system tasks
+            if (!task.isSystem && !task.isSubTask)
+              ListTile(
+                leading: Icon(
+                  Icons.add_task,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                title: Text(
+                  'Add sub-task',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                  builder: (_) => CreateTaskSheet(existingTask: task),
-                );
-              },
-            ),
-            if (!task.isReusable)
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: AppTheme.surface,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    builder: (_) => CreateTaskSheet(
+                      parentTask: task,
+                    ),
+                  );
+                },
+              ),
+
+            if (!task.isSystem)
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit task'),
+                onTap: () {
+                  Navigator.pop(context);
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: AppTheme.surface,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    builder: (_) => CreateTaskSheet(existingTask: task),
+                  );
+                },
+              ),
+
+            if (!task.isSystem && task.isReusable)
               ListTile(
                 leading: const Icon(Icons.archive_outlined),
                 title: const Text('Archive task'),
                 onTap: () async {
                   Navigator.pop(context);
-                  final repo = ref.read(taskTemplateRepositoryProvider);
-                  await repo.archive(task.id);
-                  ref.invalidate(taskTemplatesProvider);
+                  try {
+                    final repo = ref.read(taskTemplateRepositoryProvider);
+                    await repo.archive(task.id);
+                    ref.invalidate(taskTemplatesProvider);
+                  } catch (e, stack) {
+                    await logger.error('TaskCard.archive', e, stack);
+                    if (context.mounted) {
+                      SnackbarHelper.showError(
+                          context, ErrorMessages.archiveTaskFailed);
+                    }
+                  }
                 },
               ),
-            ListTile(
-              leading: const Icon(
-                Icons.delete_outline,
-                color: AppTheme.error,
+
+            if (!task.isSystem)
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: AppTheme.error,
+                ),
+                title: const Text(
+                  'Delete task',
+                  style: TextStyle(color: AppTheme.error),
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    final repo = ref.read(taskTemplateRepositoryProvider);
+                    await repo.delete(task.id);
+                    ref.invalidate(taskTemplatesProvider);
+                  } catch (e, stack) {
+                    await logger.error('TaskCard.delete', e, stack);
+                    if (context.mounted) {
+                      SnackbarHelper.showError(
+                          context, ErrorMessages.deleteTaskFailed);
+                    }
+                  }
+                },
               ),
-              title: const Text(
-                'Delete task',
-                style: TextStyle(color: AppTheme.error),
-              ),
-              onTap: () async {
-                Navigator.pop(context);
-                final repo = ref.read(taskTemplateRepositoryProvider);
-                await repo.delete(task.id);
-                ref.invalidate(taskTemplatesProvider);
-              },
-            ),
+
             const Gap(8),
           ],
         ),
@@ -246,48 +302,165 @@ class _SubTaskPreview extends ConsumerWidget {
     return subTasksAsync.when(
       data: (subTasks) {
         if (subTasks.isEmpty) return const SizedBox.shrink();
+
         return Column(
           children: [
-            const Divider(
-              height: 1,
-              color: AppTheme.surfaceVariant,
-            ),
-            ...subTasks.take(3).map((sub) => Padding(
-              padding: const EdgeInsets.fromLTRB(28, 8, 12, 8),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.subdirectory_arrow_right,
-                    size: 14,
-                    color: AppTheme.textDisabled,
-                  ),
-                  const Gap(8),
-                  Expanded(
-                    child: Text(
-                      sub.name,
-                      style:
-                      Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                ],
-              ),
-            )),
-            if (subTasks.length > 3)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(28, 0, 12, 8),
-                child: Text(
-                  '+${subTasks.length - 3} more',
-                  style: const TextStyle(
-                    color: AppTheme.textDisabled,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
+            Divider(height: 1, color: AppTheme.surfaceVariant),
+            ...subTasks.map((sub) => _SubTaskRow(subTask: sub)),
           ],
         );
       },
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _SubTaskRow extends ConsumerWidget {
+  final TaskTemplate subTask;
+
+  const _SubTaskRow({super.key, required this.subTask});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final color = parseColor(
+      subTask.categoryColor,
+      fallback: Theme.of(context).colorScheme.primary,
+    );
+
+    return GestureDetector(
+      onTap: () => _showSubTaskOptions(context, ref),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.subdirectory_arrow_right,
+              size: 14,
+              color: AppTheme.textDisabled,
+            ),
+            const Gap(8),
+            Container(
+              width: 3,
+              height: 24,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Gap(8),
+            Expanded(
+              child: Text(
+                subTask.name,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+            if (subTask.categoryName != null)
+              Text(
+                subTask.categoryName!,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            const Gap(8),
+            const Icon(
+              Icons.more_vert,
+              size: 14,
+              color: AppTheme.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSubTaskOptions(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Gap(8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Gap(12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  subTask.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+            const Gap(8),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit sub-task'),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: AppTheme.surface,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  builder: (_) => CreateTaskSheet(existingTask: subTask),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.delete_outline,
+                color: AppTheme.error,
+              ),
+              title: const Text(
+                'Delete sub-task',
+                style: TextStyle(color: AppTheme.error),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                try {
+                  final repo = ref.read(taskTemplateRepositoryProvider);
+                  await repo.delete(subTask.id);
+                  ref.invalidate(taskTemplatesProvider);
+                  ref.invalidate(subTasksProvider(subTask.parentTaskId!));
+                } catch (e, stack) {
+                  await logger.error('SubTaskRow.delete', e, stack);
+                  if (context.mounted) {
+                    SnackbarHelper.showError(
+                        context, ErrorMessages.deleteTaskFailed);
+                  }
+                }
+              },
+            ),
+            const Gap(8),
+          ],
+        ),
+      ),
     );
   }
 }

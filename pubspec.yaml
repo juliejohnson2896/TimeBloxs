@@ -5,6 +5,8 @@ environment:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/
 
 dependencies:
   flutter:
@@ -33,6 +35,17 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   build_runner: ^2.5.4
   riverpod_generator: ^2.6.5
+  flutter_launcher_icons: ^0.13.1
 
   # Drift code generation
   drift_dev: ^2.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon.png"
+  min_sdk_android: 21
+  windows:
+    generate: true
+    image_path: "assets/icon.png"
+    icon_size: 48

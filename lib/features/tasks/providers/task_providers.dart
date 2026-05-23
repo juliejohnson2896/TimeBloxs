@@ -89,7 +89,14 @@ final taskSearchQueryProvider = StateProvider<String>((ref) => '');
 
 // Sub tasks for a given parent
 final subTasksProvider =
-FutureProvider.family<List<TaskTemplate>, String>((ref, parentId) async {
+StreamProvider.family<List<TaskTemplate>, String>((ref, parentId) {
   final repo = ref.watch(taskTemplateRepositoryProvider);
-  return repo.getSubTasks(parentId);
+  return repo.watchSubTasks(parentId);
+});
+
+// Used by assign task sheet and block sheet — includes sub-tasks
+final allTasksForPickerProvider =
+FutureProvider<List<TaskTemplate>>((ref) async {
+  final repo = ref.watch(taskTemplateRepositoryProvider);
+  return repo.getAllIncludingSubTasks();
 });
