@@ -62,7 +62,7 @@ jobs:
           sudo apt-get install -y lcov
           
           # Remove Non-Testable Files
-          lcov --remove coverage/lcov.info 'lib/core/database/tables/*' 'lib/core/theme/app_theme.dart' 'lib/**/*.g.dart' 'lib/core/services/auth_notifier.dart' 'lib/core/router/app_router.dart' 'lib/main.dart' -o coverage/new_lcov.info
+          lcov --ignore-errors unused  --remove coverage/lcov.info 'lib/core/database/tables/*' 'lib/core/theme/app_theme.dart' 'lib/**/*.g.dart' -o coverage/new_lcov.info
           
           # Generate summary
           lcov --summary coverage/new_lcov.info
