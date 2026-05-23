@@ -80,7 +80,7 @@ class SettingsScreen extends ConsumerWidget {
                         spacing: 12,
                         runSpacing: 12,
                         children: accentColorOptions.map((color) {
-                          final isSelected = accentColor.value == color.value;
+                          final isSelected = accentColor.toARGB32() == color.toARGB32();
                           return GestureDetector(
                             onTap: () => ref
                                 .read(accentColorProvider.notifier)
@@ -101,7 +101,7 @@ class SettingsScreen extends ConsumerWidget {
                                 boxShadow: isSelected
                                     ? [
                                   BoxShadow(
-                                    color: color.withOpacity(0.6),
+                                    color: color.withValues(alpha: 0.6),
                                     blurRadius: 8,
                                     spreadRadius: 1,
                                   )
@@ -233,7 +233,7 @@ class SettingsScreen extends ConsumerWidget {
         if (context.mounted) {
           SnackbarHelper.showError(
             context,
-            'Day start must be earlier than day end (${dayEnd}).',
+            'Day start must be earlier than day end ($dayEnd).',
           );
         }
         return;
@@ -248,7 +248,7 @@ class SettingsScreen extends ConsumerWidget {
         if (context.mounted) {
           SnackbarHelper.showError(
             context,
-            'Day end must be later than day start (${dayStart}).',
+            'Day end must be later than day start ($dayStart).',
           );
         }
         return;

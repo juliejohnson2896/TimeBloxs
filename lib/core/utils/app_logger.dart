@@ -45,6 +45,18 @@ class AppLogger {
     } catch (_) {}
   }
 
+  Future<void> debug(String context, String message) async {
+    final entry =
+        '[${DateTime.now().toIso8601String()}] DEBUG [$context]: $message\n';
+
+    if (kDebugMode) print(entry);
+
+    try {
+      await _init();
+      await _logFile!.writeAsString(entry, mode: FileMode.append);
+    } catch (_) {}
+  }
+
   Future<String> readLogs() async {
     try {
       await _init();

@@ -9,7 +9,9 @@ Color parseColor(String? hex, {Color? fallback}) {
     return fallback ?? AppTheme.primary;
   }
   try {
-    return Color(int.parse(hex.replaceFirst('#', '0xFF')));
+    // Handle both '#RRGGBB' and 'RRGGBB' formats
+    final cleanHex = hex.startsWith('#') ? hex.substring(1) : hex;
+    return Color(int.parse('0xFF$cleanHex'));
   } catch (_) {
     return fallback ?? AppTheme.primary;
   }

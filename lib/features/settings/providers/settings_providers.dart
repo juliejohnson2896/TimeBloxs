@@ -27,7 +27,7 @@ class AccentColorNotifier extends StateNotifier<Color> {
 
   Future<void> setColor(Color color) async {
     state = color;
-    await _service.setAccentColor(color.value);
+    await _service.setAccentColor(color.toARGB32());
   }
 }
 

@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:timebloxs/core/theme/app_theme.dart';
 
 class SettingsService {
   static const String _dayStartKey = 'day_start_time';

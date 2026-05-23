@@ -1,5 +1,6 @@
 import 'package:pocketbase/pocketbase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timebloxs/core/utils/app_logger.dart';
 
 class PocketBaseService {
   static const String _baseUrl = 'https://pb-timebloxs.titanserver.org';
@@ -34,24 +35,19 @@ class PocketBaseService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_authTokenKey);
 
-    print('DEBUG: Loading persisted auth...');
-    print('DEBUG: Token found: ${token != null && token.isNotEmpty}');
-
     if (token != null && token.isNotEmpty) {
       try {
         // Load the token into the auth store BEFORE calling authRefresh
         _pb.authStore.save(token, null);
 
-        print('DEBUG: Attempting auth refresh...');
         await _pb.collection('users').authRefresh();
         await persistAuth();
-        print('DEBUG: Auth refresh successful, user: ${_pb.authStore.record?.id}');
-      } catch (e) {
-        print('DEBUG: Auth refresh failed: $e');
+      } catch (e, stack) {
+        await logger.error('PocketBase.loadPersistedAuth', e, stack);
         await clearAuth();
       }
     } else {
-      print('DEBUG: No token found, user needs to login');
+      await logger.debug('PocketBase.loadPersistedAuth', "No token found, user needs to login");
     }
   }
 
@@ -64,8 +60,8 @@ class PocketBaseService {
       );
       await persistAuth();
       return auth;
-    } catch (e) {
-      print('PocketBase signIn error: $e');
+    } catch (e, stack) {
+      await logger.error('PocketBase.signIn', e, stack);
       rethrow;
     }
   }

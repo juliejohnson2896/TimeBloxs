@@ -122,6 +122,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
       if (mounted) Navigator.pop(context);
     } catch (e, stack) {
       await logger.error('CreateTaskSheet._submit', e, stack);
+      if(!mounted) return;
       SnackbarHelper.showError(
         context,
         _isEditing
@@ -242,7 +243,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
                           ),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? color.withOpacity(0.2)
+                                ? color.withValues(alpha: 0.2)
                                 : AppTheme.surfaceVariant,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
@@ -308,7 +309,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
                       ),
                       const Gap(8),
                       DropdownButtonFormField<String>(
-                        value: safeValue,    // use safeValue not _selectedProjectId
+                        initialValue: safeValue,    // use safeValue not _selectedProjectId
                         dropdownColor: AppTheme.surfaceVariant,
                         decoration: const InputDecoration(
                           hintText: 'No project',
@@ -378,7 +379,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
                       value: _isReusable,
                       onChanged: (value) =>
                           setState(() => _isReusable = value),
-                      activeColor: accentColor,
+                      activeThumbColor: accentColor,
                     ),
                   ],
                 ),

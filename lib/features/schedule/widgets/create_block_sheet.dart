@@ -136,6 +136,7 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
       if (mounted) Navigator.pop(context);
     } catch (e, stack) {
       await logger.error('CreateBlockSheet._submit', e, stack);
+      if(!mounted) return;
       SnackbarHelper.showError(
         context,
         _isEditing
@@ -236,7 +237,7 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
                 const Gap(12),
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _durationMins,
+                    initialValue: _durationMins,
                     dropdownColor: AppTheme.surfaceVariant,
                     decoration: const InputDecoration(
                       labelText: 'Duration',
@@ -318,7 +319,7 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
                           ),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? color.withOpacity(0.2)
+                                ? color.withValues(alpha: 0.2)
                                 : AppTheme.surfaceVariant,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
@@ -411,7 +412,7 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
                       ),
                       const Gap(8),
                       DropdownButtonFormField<String>(
-                        value: safeTaskValue,
+                        initialValue: safeTaskValue,
                         dropdownColor: AppTheme.surfaceVariant,
                         decoration: const InputDecoration(
                           hintText: 'Select a task',
@@ -508,7 +509,7 @@ class _TypeChip extends StatelessWidget {
           const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: selected
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
                 : AppTheme.surfaceVariant,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(

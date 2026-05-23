@@ -29,7 +29,11 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
+  // Default constructor
   AppDatabase() : super(_openConnection());
+
+  // Testing constructor — uses provided query executor (in-memory)
+  AppDatabase.forTesting(super.executor);
 
   @override
   int get schemaVersion => 2;

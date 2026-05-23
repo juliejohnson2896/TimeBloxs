@@ -132,7 +132,7 @@ class AssignTaskSheet extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (matchingTopLevel.isNotEmpty || matchingSubTasks.isNotEmpty) ...[
-                          _SectionHeader(label: 'Matching Category'),
+                          const _SectionHeader(label: 'Matching Category'),
                           const Gap(8),
                           ...matchingTopLevel.map((task) => _TaskOption(
                             task: task,
@@ -191,6 +191,7 @@ class AssignTaskSheet extends ConsumerWidget {
       if (context.mounted) Navigator.pop(context);
     } catch (e, stack) {
       await logger.error('AssignTaskSheet._assign', e, stack);
+      if(!context.mounted) return;
       SnackbarHelper.showError(context, ErrorMessages.assignTaskFailed);
     }
   }

@@ -144,10 +144,10 @@ class ScheduledBlock {
     String? startTime,
     int? durationMins,
     BlockType? blockType,
-    String? taskTemplateId,
+    Object? taskTemplateId = _sentinel,  // use sentinel
     String? categoryId,
     BlockStatus? status,
-    String? notes,
+    Object? notes = _sentinel,           // same for notes
     String? projectColor,
   }) {
     return ScheduledBlock(
@@ -157,18 +157,23 @@ class ScheduledBlock {
       durationMins: durationMins ?? this.durationMins,
       label: label ?? this.label,
       blockType: blockType ?? this.blockType,
-      taskTemplateId: taskTemplateId ?? this.taskTemplateId,
+      taskTemplateId: taskTemplateId == _sentinel
+          ? this.taskTemplateId
+          : taskTemplateId as String?,
       categoryId: categoryId ?? this.categoryId,
       status: status ?? this.status,
-      notes: notes ?? this.notes,
+      notes: notes == _sentinel ? this.notes : notes as String?,
       created: created,
       updated: updated,
       taskTemplateName: taskTemplateName,
       categoryName: categoryName,
-      categoryColor: categoryColor,
+      categoryColor: categoryColor ?? categoryColor,
       projectColor: projectColor ?? this.projectColor,
     );
   }
+
+  // Private sentinel object — unique instance used to detect "not provided"
+  static const Object _sentinel = Object();
 
   /// Returns end time as a string e.g. "10:45"
   String get endTime {

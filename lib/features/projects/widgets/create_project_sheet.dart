@@ -97,6 +97,7 @@ class _CreateProjectSheetState extends ConsumerState<CreateProjectSheet> {
       if (mounted) Navigator.pop(context);
     } catch (e, stack) {
       await logger.error('CreateProjectSheet._submit', e, stack);
+      if(!mounted) return;
       SnackbarHelper.showError(
         context,
         _isEditing
@@ -201,7 +202,7 @@ class _CreateProjectSheetState extends ConsumerState<CreateProjectSheet> {
                       boxShadow: isSelected
                           ? [
                         BoxShadow(
-                          color: color.withOpacity(0.5),
+                          color: color.withValues(alpha: 0.5),
                           blurRadius: 8,
                           spreadRadius: 1,
                         )

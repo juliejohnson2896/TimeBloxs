@@ -123,7 +123,7 @@ class _TimeGridState extends ConsumerState<TimeGrid> {
                       right: 0,
                       child: Container(
                         height: 1,
-                        color: AppTheme.surfaceVariant.withOpacity(0.4),
+                        color: AppTheme.surfaceVariant.withValues(alpha: 0.4),
                       ),
                     );
                   }),
@@ -137,7 +137,7 @@ class _TimeGridState extends ConsumerState<TimeGrid> {
                       right: 0,
                       child: Container(
                         height: 1,
-                        color: AppTheme.surfaceVariant.withOpacity(0.2),
+                        color: AppTheme.surfaceVariant.withValues(alpha: 0.2),
                       ),
                     );
                   }),
@@ -175,10 +175,10 @@ class _TimeGridState extends ConsumerState<TimeGrid> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
                 width: 1,
               ),
             ),
@@ -195,7 +195,7 @@ class _TimeGridState extends ConsumerState<TimeGrid> {
           Expanded(
             child: Container(
               height: 1,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
             ),
           ),
         ],

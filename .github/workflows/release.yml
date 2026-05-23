@@ -53,6 +53,29 @@ jobs:
       - name: Build release APK
         run: flutter build apk --release
 
+      - name: Run tests with coverage
+        run: flutter test --coverage
+
+      - name: Check coverage threshold
+        run: |
+          # Install lcov
+          sudo apt-get install -y lcov
+          
+          # Generate summary
+          lcov --summary coverage/lcov.info
+          
+          # Extract the line coverage percentage
+          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | grep -oP '\d+\.\d+(?=%)') 
+          echo "Coverage: $COVERAGE%"
+          
+          # Fail if below threshold (e.g. 70%)
+          THRESHOLD=70
+          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+            echo "Coverage $COVERAGE% is below threshold of $THRESHOLD%"
+            exit 1
+          fi
+          echo "Coverage $COVERAGE% meets threshold of $THRESHOLD%"
+
       - name: Rename APK with version tag
         run: |
           mv build/app/outputs/flutter-apk/app-release.apk \

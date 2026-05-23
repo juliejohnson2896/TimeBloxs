@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/desktop_constrained.dart';
-import '../providers/task_providers.dart';
 import '../widgets/task_filter_bar.dart';
 import '../widgets/task_list.dart';
 import '../widgets/create_task_sheet.dart';

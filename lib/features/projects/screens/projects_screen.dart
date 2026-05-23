@@ -49,7 +49,7 @@ class ProjectsScreen extends ConsumerWidget {
                         ),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
                               : AppTheme.surfaceVariant,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(

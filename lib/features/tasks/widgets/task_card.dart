@@ -74,14 +74,14 @@ class TaskCard extends ConsumerWidget {
                             ),
                           ],
                           if (task.projectName != null) ...[
-                            Text(
+                            const Text(
                               ' · ',
                               style: TextStyle(
                                 color: AppTheme.textDisabled,
                                 fontSize: 12,
                               ),
                             ),
-                            Icon(
+                            const Icon(
                               Icons.folder_outlined,
                               size: 12,
                               color: AppTheme.textSecondary,
@@ -274,9 +274,9 @@ class _Badge extends StatelessWidget {
       margin: const EdgeInsets.only(right: 4),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Text(
         label,
@@ -305,7 +305,7 @@ class _SubTaskPreview extends ConsumerWidget {
 
         return Column(
           children: [
-            Divider(height: 1, color: AppTheme.surfaceVariant),
+            const Divider(height: 1, color: AppTheme.surfaceVariant),
             ...subTasks.map((sub) => _SubTaskRow(subTask: sub)),
           ],
         );
@@ -319,7 +319,7 @@ class _SubTaskPreview extends ConsumerWidget {
 class _SubTaskRow extends ConsumerWidget {
   final TaskTemplate subTask;
 
-  const _SubTaskRow({super.key, required this.subTask});
+  const _SubTaskRow({required this.subTask});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
