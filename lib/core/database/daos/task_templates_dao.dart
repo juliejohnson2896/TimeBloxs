@@ -87,6 +87,12 @@ class TaskTemplatesDao extends DatabaseAccessor<AppDatabase>
         ..orderBy([(t) => OrderingTerm.asc(t.name)]))
           .watch();
 
+  Stream<List<TaskTemplatesTableData>> watchAllIncludingSubTasks() =>
+      (select(taskTemplatesTable)
+        ..where((t) => t.isArchived.equals(false))
+        ..orderBy([(t) => OrderingTerm.asc(t.name)]))
+          .watch();
+
   Stream<List<TaskTemplatesTableData>> watchSubTasks(String parentTaskId) =>
       (select(taskTemplatesTable)
         ..where((t) =>

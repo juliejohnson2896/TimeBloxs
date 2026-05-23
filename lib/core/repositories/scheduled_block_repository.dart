@@ -94,8 +94,8 @@ class ScheduledBlockRepository {
   Stream<List<ScheduledBlock>> watchForDate(DateTime date) {
     final blocksStream = _db.scheduledBlocksDao.watchForDate(date);
     final categoriesStream = _db.taskCategoriesDao.watchAll();
-    final tasksStream = _db.taskTemplatesDao.watchAll();
-    final projectsStream = _db.projectsDao.watchAll();  // add this
+    final tasksStream = _db.taskTemplatesDao.watchAllIncludingSubTasks(); // changed
+    final projectsStream = _db.projectsDao.watchAll();
 
     return Rx.combineLatest4(
       blocksStream,
@@ -144,7 +144,7 @@ class ScheduledBlockRepository {
     if (rows.isEmpty) return [];
 
     final categories = await _db.taskCategoriesDao.getAll();
-    final tasks = await _db.taskTemplatesDao.getAll();
+    final tasks = await _db.taskTemplatesDao.getAllIncludingSubTasks(); // changed
     final projects = await _db.projectsDao.getAll();
 
     final categoryMap = {for (final c in categories) c.id: c};
