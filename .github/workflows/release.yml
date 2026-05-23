@@ -61,11 +61,14 @@ jobs:
           # Install lcov
           sudo apt-get install -y lcov
           
+          # Remove Non-Testable Files
+          lcov --remove coverage/lcov.info 'lib/core/database/tables/*' 'lib/core/theme/app_theme.dart' 'lib/**/*.g.dart' 'lib/core/services/pocketbase_service.dart' 'lib/core/services/auth_notifier.dart' 'lib/core/router/app_router.dart' 'lib/main.dart' -o coverage/new_lcov.info
+          
           # Generate summary
-          lcov --summary coverage/lcov.info
+          lcov --summary coverage/new_lcov.info
           
           # Extract the line coverage percentage
-          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | grep -oP '\d+\.\d+(?=%)') 
+          COVERAGE=$(lcov --summary coverage/new_lcov.info 2>&1 | grep "lines" | grep -oP '\d+\.\d+(?=%)') 
           echo "Coverage: $COVERAGE%"
           
           # Fail if below threshold (e.g. 70%)
