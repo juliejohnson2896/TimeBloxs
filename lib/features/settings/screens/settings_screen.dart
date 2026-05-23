@@ -173,7 +173,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   title: Text('Timebloxs'),
                   trailing: Text(
-                    'v0.1.0',
+                    'v1.0.0',
                     style: TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 13,
