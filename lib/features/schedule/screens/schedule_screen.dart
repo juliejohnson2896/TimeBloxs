@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../providers/schedule_providers.dart';
 import '../widgets/schedule_header.dart';
 import '../widgets/time_grid.dart';
+import '../../../core/widgets/desktop_constrained.dart';
 
 class ScheduleScreen extends ConsumerWidget {
   const ScheduleScreen({super.key});
@@ -32,11 +33,13 @@ class ScheduleScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          ScheduleHeader(selectedDate: selectedDate),
-          const Expanded(child: TimeGrid()),
-        ],
+      body: DesktopConstrained(
+        child: Column(
+          children: [
+            ScheduleHeader(selectedDate: selectedDate),
+            const Expanded(child: TimeGrid()),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreateBlock(context, ref, selectedDate),
