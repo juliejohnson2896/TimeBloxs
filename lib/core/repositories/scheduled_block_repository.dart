@@ -108,9 +108,12 @@ class ScheduledBlockRepository {
         final projectMap = {for (final p in projects) p.id: p};
 
         return blocks.map((row) {
-          final category = categoryMap[row.categoryId];
+          final blockCategory = categoryMap[row.categoryId];
           final task = row.taskTemplateId != null
               ? taskMap[row.taskTemplateId]
+              : null;
+          final taskCategory = task != null
+              ? categoryMap[task.categoryId]
               : null;
           final project = task?.projectId != null
               ? projectMap[task!.projectId]
@@ -130,9 +133,10 @@ class ScheduledBlockRepository {
             created: row.createdAt,
             updated: row.updatedAt,
             taskTemplateName: task?.name,
-            categoryName: category?.name,
-            categoryColor: category?.color,
-            projectColor: project?.color,   // add this
+            categoryName: blockCategory?.name,
+            categoryColor: blockCategory?.color,
+            taskCategoryColor: taskCategory?.color,  // add this
+            projectColor: project?.color,
           );
         }).toList();
       },
@@ -144,7 +148,7 @@ class ScheduledBlockRepository {
     if (rows.isEmpty) return [];
 
     final categories = await _db.taskCategoriesDao.getAll();
-    final tasks = await _db.taskTemplatesDao.getAllIncludingSubTasks(); // changed
+    final tasks = await _db.taskTemplatesDao.getAllIncludingSubTasks();
     final projects = await _db.projectsDao.getAll();
 
     final categoryMap = {for (final c in categories) c.id: c};
@@ -152,11 +156,16 @@ class ScheduledBlockRepository {
     final projectMap = {for (final p in projects) p.id: p};
 
     return rows.map((row) {
-      final category = categoryMap[row.categoryId];
-      final task =
-      row.taskTemplateId != null ? taskMap[row.taskTemplateId] : null;
-      final project =
-      task?.projectId != null ? projectMap[task!.projectId] : null;
+      final blockCategory = categoryMap[row.categoryId];
+      final task = row.taskTemplateId != null
+          ? taskMap[row.taskTemplateId]
+          : null;
+      final taskCategory = task != null
+          ? categoryMap[task.categoryId]
+          : null;
+      final project = task?.projectId != null
+          ? projectMap[task!.projectId]
+          : null;
 
       return ScheduledBlock(
         id: row.id,
@@ -172,8 +181,9 @@ class ScheduledBlockRepository {
         created: row.createdAt,
         updated: row.updatedAt,
         taskTemplateName: task?.name,
-        categoryName: category?.name,
-        categoryColor: category?.color,
+        categoryName: blockCategory?.name,
+        categoryColor: blockCategory?.color,
+        taskCategoryColor: taskCategory?.color,  // add this
         projectColor: project?.color,
       );
     }).toList();
@@ -201,5 +211,11 @@ class ScheduledBlockRepository {
       ),
     );
     return (await getById(blockId))!;
+  }
+
+  Future<List<ScheduledBlock>> getByTaskTemplateId(
+      String taskTemplateId) async {
+    final rows = await _db.scheduledBlocksDao.getByTaskTemplateId(taskTemplateId);
+    return _enrichRows(rows);
   }
 }

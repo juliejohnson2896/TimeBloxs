@@ -125,6 +125,21 @@ void main() {
         expect(block.categoryName, equals('Focus'));
         expect(block.categoryColor, equals('#2196F3'));
       });
+
+      test('handles expanded task category colour', () async {
+        final record = Map<String, dynamic>.from(sampleRecord)
+          ..['expand'] = {
+            'task_template': {'name': 'Fix login bug'},
+            'category': {'name': 'Focus', 'color': '#2196F3'},
+          };
+        final block = ScheduledBlock.fromRecord(record);
+        expect(block.taskCategoryColor, isNull); // fromRecord doesn't set this
+      });
+
+      test('taskCategoryColor defaults to null', () {
+        final block = ScheduledBlock.fromRecord(sampleRecord);
+        expect(block.taskCategoryColor, isNull);
+      });
     });
 
     group('computed properties', () {
@@ -235,6 +250,20 @@ void main() {
         expect(updated.blockType, equals(block.blockType));
         expect(updated.categoryId, equals(block.categoryId));
         expect(updated.status, equals(block.status));
+      });
+
+      test('copies with updated taskCategoryColor', () {
+        final block = ScheduledBlock.fromRecord(sampleRecord);
+        final updated = block.copyWith(taskCategoryColor: '#9C27B0');
+        expect(updated.taskCategoryColor, equals('#9C27B0'));
+        expect(updated.label, equals(block.label));
+      });
+
+      test('can clear taskCategoryColor via copyWith', () {
+        final block = ScheduledBlock.fromRecord(sampleRecord)
+            .copyWith(taskCategoryColor: '#9C27B0');
+        final cleared = block.copyWith(taskCategoryColor: null);
+        expect(cleared.taskCategoryColor, isNull);
       });
     });
   });

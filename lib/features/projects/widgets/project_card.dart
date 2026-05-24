@@ -4,12 +4,14 @@ import 'package:gap/gap.dart';
 import 'package:timebloxs/core/utils/color_utils.dart';
 import 'package:timebloxs/features/projects/widgets/create_project_sheet.dart';
 import '../../../core/models/project.dart';
+import '../../../core/models/scheduled_block.dart';
+import '../../../core/providers/invalidation_service.dart';
+import '../../../core/repositories/scheduled_block_repository.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/snackbar_helper.dart';
-import '../../tasks/providers/task_providers.dart';
 import '../providers/project_providers.dart';
 
 enum _ProjectDeleteChoice {
@@ -190,51 +192,86 @@ class ProjectCard extends ConsumerWidget {
     try {
       final taskRepo = ref.read(taskTemplateRepositoryProvider);
       final projectRepo = ref.read(projectRepositoryProvider);
+      final blockRepo = ref.read(scheduledBlockRepositoryProvider);
+      final invalidation = ref.read(invalidationServiceProvider);
 
-      // Check for tasks belonging to this project
       final tasks = await taskRepo.getByProject(project.id);
 
       if (tasks.isEmpty) {
-        // No tasks — just delete
-        if(!context.mounted) return;
+        if (!context.mounted) return;
         final confirmed = await _confirmDelete(context);
         if (confirmed != true) return;
         await projectRepo.delete(project.id);
-        ref.invalidate(allProjectsProvider);
-        ref.invalidate(projectsProvider);
+        invalidation.onProjectChanged();
         return;
       }
 
-      // Has tasks — show choice dialog
       if (!context.mounted) return;
       final choice = await _showTaskChoiceDialog(context, tasks.length);
-      if (choice == null) return; // cancelled
+      if (choice == null) return;
 
       if (choice == _ProjectDeleteChoice.deleteTasks) {
-        // Delete all tasks then delete project
+        // Find all blocks assigned to these tasks and unassign them
         for (final task in tasks) {
+          // Get sub-tasks too
+          final subTasks = await taskRepo.getSubTasks(task.id);
+          for (final sub in subTasks) {
+            if (!context.mounted) return;
+            await _cleanBlocksForTask(blockRepo, sub.id, context);
+            await taskRepo.delete(sub.id);
+          }
+          if (!context.mounted) return;
+          await _cleanBlocksForTask(blockRepo, task.id, context);
           await taskRepo.delete(task.id);
         }
         await projectRepo.delete(project.id);
       } else {
-        // Move tasks to general pool then delete project
+        // Move tasks to general pool
         for (final task in tasks) {
-          await taskRepo.update(
-            task.copyWith(projectId: null),
-          );
+          await taskRepo.update(task.copyWith(projectId: null));
         }
         await projectRepo.delete(project.id);
       }
 
-      ref.invalidate(allProjectsProvider);
-      ref.invalidate(projectsProvider);
-      ref.invalidate(taskTemplatesProvider);
+      invalidation.onProjectChanged();
 
     } catch (e, stack) {
       await logger.error('ProjectCard._handleDelete', e, stack);
       if (context.mounted) {
         SnackbarHelper.showError(context, ErrorMessages.deleteProjectFailed);
       }
+    }
+  }
+
+  /// Unassigns or deletes blocks that reference a specific task
+  Future<void> _cleanBlocksForTask(
+      ScheduledBlockRepository blockRepo,
+      String taskId,
+      BuildContext context,
+      ) async {
+    final blocks = await blockRepo.getByTaskTemplateId(taskId);
+    int unassigned = 0;
+    int deleted = 0;
+
+    for (final block in blocks) {
+      if (block.blockType == BlockType.static) {
+        await blockRepo.delete(block.id);
+        deleted++;
+      } else {
+        await blockRepo.unassignTask(block.id);
+        unassigned++;
+      }
+    }
+
+    if ((unassigned > 0 || deleted > 0) && context.mounted) {
+      final parts = <String>[];
+      if (deleted > 0) parts.add('$deleted block${deleted > 1 ? 's' : ''} removed');
+      if (unassigned > 0) parts.add('$unassigned block${unassigned > 1 ? 's' : ''} unassigned');
+
+      SnackbarHelper.showSuccess(
+        context,
+        'Schedule updated: ${parts.join(', ')}',
+      );
     }
   }
 

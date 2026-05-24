@@ -15,6 +15,7 @@ class TaskTemplate {
   final String? categoryName;
   final String? categoryColor;
   final String? projectName;
+  final String? projectColor;
 
   const TaskTemplate({
     required this.id,
@@ -31,6 +32,7 @@ class TaskTemplate {
     this.categoryName,
     this.categoryColor,
     this.projectName,
+    this.projectColor,
   });
 
   factory TaskTemplate.fromRecord(Map<String, dynamic> record) {
@@ -38,6 +40,7 @@ class TaskTemplate {
     String? categoryName;
     String? categoryColor;
     String? projectName;
+    String? projectColor;
 
     final expand = record['expand'] as Map<String, dynamic>?;
     if (expand != null) {
@@ -49,6 +52,7 @@ class TaskTemplate {
       final project = expand['project'] as Map<String, dynamic>?;
       if (project != null) {
         projectName = project['name'] as String?;
+        projectColor = project['color'] as String?;
       }
     }
 
@@ -67,6 +71,7 @@ class TaskTemplate {
       categoryName: categoryName,
       categoryColor: categoryColor,
       projectName: projectName,
+      projectColor: projectColor,
     );
   }
 
@@ -108,6 +113,7 @@ class TaskTemplate {
       categoryName: categoryName,
       categoryColor: categoryColor,
       projectName: projectName,
+      projectColor: projectName
     );
   }
 

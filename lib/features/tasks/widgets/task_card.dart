@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:timebloxs/core/repositories/repository_providers.dart';
 import '../../../core/models/task_template.dart';
+import '../../../core/providers/invalidation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/color_utils.dart';
@@ -19,7 +20,12 @@ class TaskCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accentColor = Theme.of(context).colorScheme.primary;
-    final categoryColor = parseColor(task.categoryColor, fallback: accentColor);
+
+    // Project colour takes priority over category colour
+    final color = parseColor(
+        hierarchyCheck(task.projectColor, task.categoryColor),
+        fallback: accentColor
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -39,7 +45,7 @@ class TaskCard extends ConsumerWidget {
                   width: 4,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: categoryColor,
+                    color: color,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -64,7 +70,7 @@ class TaskCard extends ConsumerWidget {
                               child: Text(
                                 task.categoryName!,
                                 style: TextStyle(
-                                  color: categoryColor,
+                                  color: color,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -138,6 +144,7 @@ class TaskCard extends ConsumerWidget {
   }
 
   void _showOptions(BuildContext context, WidgetRef ref) {
+    final invalidation = ref.read(invalidationServiceProvider);
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.surface,
@@ -217,7 +224,7 @@ class TaskCard extends ConsumerWidget {
                   try {
                     final repo = ref.read(taskTemplateRepositoryProvider);
                     await repo.archive(task.id);
-                    ref.invalidate(taskTemplatesProvider);
+                    invalidation.onTaskChanged();
                   } catch (e, stack) {
                     await logger.error('TaskCard.archive', e, stack);
                     if (context.mounted) {
@@ -243,7 +250,7 @@ class TaskCard extends ConsumerWidget {
                   try {
                     final repo = ref.read(taskTemplateRepositoryProvider);
                     await repo.delete(task.id);
-                    ref.invalidate(taskTemplatesProvider);
+                    invalidation.onTaskChanged();
                   } catch (e, stack) {
                     await logger.error('TaskCard.delete', e, stack);
                     if (context.mounted) {
@@ -379,6 +386,7 @@ class _SubTaskRow extends ConsumerWidget {
   }
 
   void _showSubTaskOptions(BuildContext context, WidgetRef ref) {
+    final invalidation = ref.read(invalidationServiceProvider);
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.surface,
@@ -446,8 +454,7 @@ class _SubTaskRow extends ConsumerWidget {
                 try {
                   final repo = ref.read(taskTemplateRepositoryProvider);
                   await repo.delete(subTask.id);
-                  ref.invalidate(taskTemplatesProvider);
-                  ref.invalidate(subTasksProvider(subTask.parentTaskId!));
+                  invalidation.onSubTaskChanged(subTask.parentTaskId!);
                 } catch (e, stack) {
                   await logger.error('SubTaskRow.delete', e, stack);
                   if (context.mounted) {

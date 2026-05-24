@@ -127,6 +127,7 @@ class TaskTemplateRepository {
         categoryName: category?.name,
         categoryColor: category?.color,
         projectName: project?.name,
+        projectColor: project?.color,
       );
     }).toList();
   }

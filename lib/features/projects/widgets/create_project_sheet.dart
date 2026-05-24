@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import 'package:timebloxs/features/tasks/providers/task_providers.dart';
+import '../../../core/providers/invalidation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/project.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/snackbar_helper.dart';
-import '../providers/project_providers.dart';
 
 class CreateProjectSheet extends ConsumerStatefulWidget {
   final Project? existingProject;
@@ -62,6 +61,8 @@ class _CreateProjectSheetState extends ConsumerState<CreateProjectSheet> {
   bool get _isValid => _nameController.text.trim().isNotEmpty;
 
   Future<void> _submit() async {
+    final invalidation = ref.read(invalidationServiceProvider);
+
     if (!_isValid) return;
     setState(() => _isLoading = true);
 
@@ -92,8 +93,7 @@ class _CreateProjectSheetState extends ConsumerState<CreateProjectSheet> {
         await repo.create(project);
       }
 
-      ref.invalidate(allProjectsProvider);
-      ref.invalidate(projectsProvider);
+      invalidation.onProjectChanged();
       if (mounted) Navigator.pop(context);
     } catch (e, stack) {
       await logger.error('CreateProjectSheet._submit', e, stack);

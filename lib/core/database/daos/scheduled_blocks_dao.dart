@@ -62,4 +62,10 @@ class ScheduledBlocksDao extends DatabaseAccessor<AppDatabase>
       ..orderBy([(t) => OrderingTerm.asc(t.startTime)]))
         .watch();
   }
+
+  Future<List<ScheduledBlocksTableData>> getByTaskTemplateId(
+      String taskTemplateId) =>
+      (select(scheduledBlocksTable)
+        ..where((t) => t.taskTemplateId.equals(taskTemplateId)))
+          .get();
 }

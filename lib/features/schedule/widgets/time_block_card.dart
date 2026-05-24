@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:timebloxs/core/utils/color_utils.dart';
 import 'package:timebloxs/features/schedule/widgets/create_block_sheet.dart';
 import '../../../core/models/scheduled_block.dart';
+import '../../../core/providers/invalidation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/utils/app_logger.dart';
@@ -19,10 +20,13 @@ class TimeBlockCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final accentColor = Theme.of(context).colorScheme.primary;
 
-    // Project colour takes priority over category colour
-    final color = block.projectColor != null
-        ? parseColor(block.projectColor, fallback: accentColor)
-        : parseColor(block.categoryColor, fallback: accentColor);
+    // Priority: project colour → task category colour → block category colour
+    final color = parseColor(
+        hierarchyCheck(
+            block.projectColor,
+            hierarchyCheck(block.taskCategoryColor, block.categoryColor)),
+      fallback: accentColor
+    );
 
     final isShort = block.durationMins < 30;
 
@@ -180,6 +184,7 @@ class TimeBlockCard extends ConsumerWidget {
   }
 
   void _showBlockOptions(BuildContext context, WidgetRef ref) {
+    final invalidation = ref.read(invalidationServiceProvider);
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.surface,
@@ -427,9 +432,11 @@ class TimeBlockCard extends ConsumerWidget {
         ),
       ),
     );
+    invalidation.onScheduleChanged();
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final invalidation = ref.read(invalidationServiceProvider);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -453,6 +460,7 @@ class TimeBlockCard extends ConsumerWidget {
     );
     if (confirmed == true) {
       await ref.read(scheduledBlockRepositoryProvider).delete(block.id);
+      invalidation.onScheduleChanged();
     }
   }
 }

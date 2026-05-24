@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:timebloxs/core/utils/color_utils.dart';
 import '../../../core/models/task_template.dart';
+import '../../../core/providers/invalidation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/utils/app_logger.dart';
@@ -185,9 +186,11 @@ class AssignTaskSheet extends ConsumerWidget {
   Future<void> _assign(
       BuildContext context, WidgetRef ref, TaskTemplate task) async {
     try {
+      final invalidation = ref.read(invalidationServiceProvider);
       await ref
           .read(scheduledBlockRepositoryProvider)
           .assignTask(blockId, task.id);
+      invalidation.onScheduleChanged();
       if (context.mounted) Navigator.pop(context);
     } catch (e, stack) {
       await logger.error('AssignTaskSheet._assign', e, stack);
@@ -229,10 +232,10 @@ class _TaskOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = parseColor(
-      task.categoryColor,
-      fallback: Theme.of(context).colorScheme.primary,
-    );
+
+    final color = task.projectColor != null
+        ? parseColor(task.projectColor, fallback: Theme.of(context).colorScheme.primary)
+        : parseColor(task.categoryColor, fallback: Theme.of(context).colorScheme.primary);
 
     return GestureDetector(
       onTap: onTap,

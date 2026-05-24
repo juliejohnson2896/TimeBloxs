@@ -64,4 +64,53 @@ void main() {
       }
     });
   });
+
+  group('hierarchyCheck', () {
+    test('returns priority when both are set', () {
+      final result = hierarchyCheck('#F44336', '#2196F3');
+      expect(result, equals('#F44336'));
+    });
+
+    test('returns fallback when priority is null', () {
+      final result = hierarchyCheck(null, '#2196F3');
+      expect(result, equals('#2196F3'));
+    });
+
+    test('returns null when both are null', () {
+      final result = hierarchyCheck(null, null);
+      expect(result, isNull);
+    });
+
+    test('returns priority when fallback is null', () {
+      final result = hierarchyCheck('#F44336', null);
+      expect(result, equals('#F44336'));
+    });
+
+    test('combined with parseColor uses priority colour', () {
+      const accentColor = Color(0xFF6C63FF);
+      final color = parseColor(
+        hierarchyCheck('#F44336', '#2196F3'),
+        fallback: accentColor,
+      );
+      expect(color, equals(const Color(0xFFF44336)));
+    });
+
+    test('combined with parseColor falls back to second colour', () {
+      const accentColor = Color(0xFF6C63FF);
+      final color = parseColor(
+        hierarchyCheck(null, '#2196F3'),
+        fallback: accentColor,
+      );
+      expect(color, equals(const Color(0xFF2196F3)));
+    });
+
+    test('combined with parseColor uses accent when both null', () {
+      const accentColor = Color(0xFF6C63FF);
+      final color = parseColor(
+        hierarchyCheck(null, null),
+        fallback: accentColor,
+      );
+      expect(color, equals(accentColor));
+    });
+  });
 }

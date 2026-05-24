@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+import '../../../core/providers/invalidation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/task_template.dart';
 import '../../../core/repositories/repository_providers.dart';
@@ -73,6 +74,7 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
 
     try {
       final repo = ref.read(taskTemplateRepositoryProvider);
+      final invalidation = ref.read(invalidationServiceProvider);
 
       if (_isEditing) {
         final updated = widget.existingTask!.copyWith(
@@ -108,15 +110,13 @@ class _CreateTaskSheetState extends ConsumerState<CreateTaskSheet> {
         await repo.create(task);
       }
 
-      ref.invalidate(taskTemplatesProvider);
-
-      // Also invalidate sub-tasks for the parent if this is a sub-task
+      // In _submit after create or update:
       if (_isSubTask) {
-        final parentId = widget.parentTask?.id
-            ?? widget.existingTask?.parentTaskId;
-        if (parentId != null) {
-          ref.invalidate(subTasksProvider(parentId));
-        }
+        invalidation.onSubTaskChanged(
+          widget.parentTask?.id ?? widget.existingTask!.parentTaskId!,
+        );
+      } else {
+        invalidation.onTaskChanged();
       }
 
       if (mounted) Navigator.pop(context);

@@ -314,5 +314,48 @@ void main() {
         expect(found, isNotNull);
       });
     });
+
+    group('getByTaskTemplateId', () {
+      test('returns blocks assigned to a specific task', () async {
+        final block1 = await createTestBlock(
+          label: 'Block with task',
+          taskTemplateId: taskId,
+          blockType: BlockType.static,
+        );
+        await createTestBlock(
+          label: 'Block without task',
+        );
+
+        final blocks = await repo.getByTaskTemplateId(taskId);
+        expect(blocks.length, equals(1));
+        expect(blocks.first.id, equals(block1.id));
+      });
+
+      test('returns empty list when no blocks assigned to task', () async {
+        final blocks =
+        await repo.getByTaskTemplateId('non_existent_task');
+        expect(blocks, isEmpty);
+      });
+
+      test('returns multiple blocks assigned to same task', () async {
+        await createTestBlock(
+          label: 'Block 1',
+          taskTemplateId: taskId,
+          startTime: '09:00',
+        );
+        await createTestBlock(
+          label: 'Block 2',
+          taskTemplateId: taskId,
+          startTime: '14:00',
+        );
+        await createTestBlock(
+          label: 'Block 3 no task',
+        );
+
+        final blocks = await repo.getByTaskTemplateId(taskId);
+        expect(blocks.length, equals(2));
+        expect(blocks.every((b) => b.taskTemplateId == taskId), isTrue);
+      });
+    });
   });
 }

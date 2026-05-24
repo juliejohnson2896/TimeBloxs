@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:timebloxs/core/utils/color_utils.dart';
+import '../../../core/providers/invalidation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/scheduled_block.dart';
 import '../../../core/repositories/repository_providers.dart';
@@ -96,6 +97,7 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
   }
 
   Future<void> _submit() async {
+    final invalidation = ref.read(invalidationServiceProvider);
     if (!_isValid) return;
     setState(() => _isLoading = true);
 
@@ -132,6 +134,7 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
         );
         await repo.create(block);
       }
+      invalidation.onScheduleChanged();
 
       if (mounted) Navigator.pop(context);
     } catch (e, stack) {
@@ -353,7 +356,6 @@ class _CreateBlockSheetState extends ConsumerState<CreateBlockSheet> {
             const Gap(16),
 
             // Task picker (only for static blocks)
-// Task picker (only for static blocks)
             if (_blockType == BlockType.static)
               tasksAsync.when(
                 data: (tasks) {

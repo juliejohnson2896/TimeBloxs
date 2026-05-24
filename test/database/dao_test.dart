@@ -2,10 +2,6 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timebloxs/core/database/app_database.dart';
-import 'package:timebloxs/core/database/tables/task_categories_table.dart';
-import 'package:timebloxs/core/database/tables/task_templates_table.dart';
-import 'package:timebloxs/core/database/tables/projects_table.dart';
-import 'package:timebloxs/core/database/tables/scheduled_blocks_table.dart';
 
 import '../helpers/test_database.dart';
 
@@ -552,6 +548,43 @@ void main() {
       final blocks =
       await db.scheduledBlocksDao.watchForDate(testDate).first;
       expect(blocks.any((b) => b.id == 'watch_block'), isTrue);
+    });
+
+    test('getByTaskTemplateId returns matching blocks', () async {
+      // Insert a task template first
+      final categories = await db.taskCategoriesDao.getAll();
+      final catId = categories.first.id;
+
+      await db.taskTemplatesDao.insertTask(
+        TaskTemplatesTableCompanion.insert(
+          id: 'task_for_block',
+          name: 'Task For Block',
+          categoryId: catId,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      await insertTestBlock(
+        id: 'assigned_block',
+        label: 'Assigned',
+        taskTemplateId: 'task_for_block',
+      );
+      await insertTestBlock(
+        id: 'unassigned_block',
+        label: 'Unassigned',
+      );
+
+      final blocks = await db.scheduledBlocksDao
+          .getByTaskTemplateId('task_for_block');
+      expect(blocks.length, equals(1));
+      expect(blocks.first.id, equals('assigned_block'));
+    });
+
+    test('getByTaskTemplateId returns empty for unknown task', () async {
+      final blocks = await db.scheduledBlocksDao
+          .getByTaskTemplateId('unknown_task');
+      expect(blocks, isEmpty);
     });
   });
 

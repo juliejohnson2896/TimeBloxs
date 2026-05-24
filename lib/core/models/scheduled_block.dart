@@ -68,6 +68,7 @@ class ScheduledBlock {
   final String? categoryName;
   final String? categoryColor;
   final String? projectColor;
+  final String? taskCategoryColor;
 
   const ScheduledBlock({
     required this.id,
@@ -86,18 +87,21 @@ class ScheduledBlock {
     this.categoryName,
     this.categoryColor,
     this.projectColor,
+    this.taskCategoryColor,
   });
 
   factory ScheduledBlock.fromRecord(Map<String, dynamic> record) {
     String? taskTemplateName;
     String? categoryName;
     String? categoryColor;
+    String? taskCategoryColor;
 
     final expand = record['expand'] as Map<String, dynamic>?;
     if (expand != null) {
       final task = expand['task_template'] as Map<String, dynamic>?;
       if (task != null) {
         taskTemplateName = task['name'] as String?;
+        taskCategoryColor = task['category_color'] as String?;
       }
       final category = expand['category'] as Map<String, dynamic>?;
       if (category != null) {
@@ -120,6 +124,7 @@ class ScheduledBlock {
       created: DateTime.parse(record['created'] as String),
       updated: DateTime.parse(record['updated'] as String),
       taskTemplateName: taskTemplateName,
+      taskCategoryColor: taskCategoryColor,
       categoryName: categoryName,
       categoryColor: categoryColor,
     );
@@ -149,6 +154,7 @@ class ScheduledBlock {
     BlockStatus? status,
     Object? notes = _sentinel,           // same for notes
     String? projectColor,
+    Object? taskCategoryColor = _sentinel,
   }) {
     return ScheduledBlock(
       id: id,
@@ -168,7 +174,12 @@ class ScheduledBlock {
       taskTemplateName: taskTemplateName,
       categoryName: categoryName,
       categoryColor: categoryColor ?? categoryColor,
-      projectColor: projectColor ?? this.projectColor,
+      projectColor: projectColor == _sentinel
+          ? this.projectColor
+          : projectColor,
+      taskCategoryColor: taskCategoryColor == _sentinel
+          ? this.taskCategoryColor
+          : taskCategoryColor as String?,
     );
   }
 
