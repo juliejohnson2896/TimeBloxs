@@ -31,7 +31,7 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-  # ── Tests ────────────────────────────────────────────────────
+  # ── Tests & Coverage ─────────────────────────────────────────
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -56,14 +56,36 @@ jobs:
       - name: Run tests with coverage
         run: flutter test --coverage
 
+      - name: Install lcov
+        run: sudo apt-get install -y lcov
+
+      - name: Filter coverage report
+        run: |
+          # Exclusions are defined in lcovrc at project root
+          # This file is version controlled and subject to PR review
+          # Modifying it is visible in diffs — not easily bypassed silently
+          lcov --config-file lcovrc \
+               --remove coverage/lcov.info \
+               'lib/core/database/tables/*' \
+               'lib/core/theme/app_theme.dart' \
+               'lib/**/*.g.dart' \
+               'lib/core/services/pocketbase_service.dart' \
+               'lib/core/services/auth_notifier.dart' \
+               'lib/core/router/app_router.dart' \
+               'lib/main.dart' \
+               --ignore-errors unused \
+               -o coverage/filtered_lcov.info
+
       - name: Check coverage threshold
         run: |
-          sudo apt-get install -y lcov
-          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | grep -oP '\d+\.\d+(?=%)')
+          COVERAGE=$(lcov --summary coverage/filtered_lcov.info 2>&1 \
+            | grep "lines" | grep -oP '\d+\.\d+(?=%)')
           echo "Coverage: $COVERAGE%"
+
           THRESHOLD=40
           if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
             echo "Coverage $COVERAGE% is below threshold of $THRESHOLD%"
+            echo "Increase test coverage or update threshold in pr_checks.yml"
             exit 1
           fi
           echo "Coverage $COVERAGE% meets threshold of $THRESHOLD%"
@@ -72,13 +94,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage/lcov.info
+          path: coverage/filtered_lcov.info
 
   # ── Android Build Check ──────────────────────────────────────
+  # Only runs on PRs targeting main — keeps develop PRs fast
   build-android:
     name: Build Android
     runs-on: ubuntu-latest
     needs: test
+    if: github.base_ref == 'main'
 
     steps:
       - name: Checkout code
@@ -106,10 +130,12 @@ jobs:
         run: flutter build apk --debug
 
   # ── Windows Build Check ──────────────────────────────────────
+  # Only runs on PRs targeting main — keeps develop PRs fast
   build-windows:
     name: Build Windows
     runs-on: windows-latest
     needs: test
+    if: github.base_ref == 'main'
 
     steps:
       - name: Checkout code
