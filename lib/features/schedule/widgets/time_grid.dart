@@ -38,11 +38,13 @@ class _TimeGridState extends ConsumerState<TimeGrid> {
     final now = DateTime.now();
     final minutes = now.hour * 60 + now.minute;
     final offset = minutes / 60 * pixelsPerHour - 100;
-    _scrollController.animateTo(
-      offset.clamp(0, double.infinity),
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        offset.clamp(0, double.infinity),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   @override
