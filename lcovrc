@@ -1,0 +1,14 @@
+# lcov configuration file
+# Defines which files to exclude from coverage reporting
+
+# Exclude generated Drift files
+exclude=**/**.g.dart
+
+# Exclude Drift table definitions (pure schema, no logic)
+exclude=**/database/tables/**
+
+# Exclude app theme (UI constants, no logic)
+exclude=**/theme/app_theme.dart
+
+# Exclude generated files
+exclude=**/*.g.dart
